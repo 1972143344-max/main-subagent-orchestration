@@ -1,0 +1,7 @@
+interface:
+  display_name: "Main/Sub-Agent Orchestration"
+  short_description: "Optionally use a planner, delegate workers, then integrate and review"
+  default_prompt: "Use $main-subagent-orchestration to decide whether this task needs a planner, choose the right handoff shape for each sub-agent, split the work into bounded worker packets when useful, keep the main agent focused on orchestration, and finish with an integration review."
+
+policy:
+  allow_implicit_invocation: true
