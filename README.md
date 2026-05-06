@@ -1,5 +1,7 @@
 # Main/Sub-Agent Orchestration
 
+[中文说明](./README.zh-CN.md)
+
 This repository contains a Codex skill for running a lead-agent workflow with optional planning, bounded worker delegation, integration, and independent final review.
 
 ## Included files
