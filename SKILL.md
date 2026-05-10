@@ -1,191 +1,369 @@
 ---
 name: main-subagent-orchestration
-description: Orchestrate coding work through a main agent that reads authority first, optionally uses a planner for high-context decomposition, decomposes a non-trivial task into bounded parallel sub-agent packets, requires worker self-review, and routes the final unified review to an independent reviewer agent when available. Use when the user explicitly wants sub-agents, delegation, or a workflow like "main agent orchestration + optional planner + sub-agent parallel implementation + total review closure", and wants the lead agent to minimize direct implementation work.
+description: Orchestrate coding work through a main agent that reads authority first, optionally uses a planner for high-context decomposition, decomposes a non-trivial task into bounded sub-agent packets, requires worker self-review, and routes the final unified review to an independent reviewer agent when available. Use when the user explicitly wants sub-agents, delegation, or a workflow like "main agent orchestration + optional planner + sub-agent implementation + total review closure", and wants the lead agent to minimize direct implementation work. If this skill is triggered and adopted as the governing workflow for the current action, read the full SKILL.md before the first major orchestration action.
 ---
 
 # Main/Sub-Agent Orchestration
 
-Use this skill when the user wants a lead agent that behaves as an orchestrator rather than the primary implementer, or when the task clearly benefits from that orchestration shape without conflicting with higher-priority instructions.
+Use this skill when the lead agent should behave primarily as an orchestrator rather than the primary implementer.
 
-The main agent owns task framing, authority checks, decomposition, worker assignment, integration, and verification orchestration. For high-context tasks, the main agent may first delegate global analysis to a planner agent that reads the authority layer, proposes decomposition, and highlights risks before worker packets are drafted. Workers own bounded implementation packets and must self-review before returning. When a reviewer agent is available, the main agent should route the final unified review to that independent reviewer instead of acting as the final reviewer itself.
+## G0. Front Door
 
-Treat this skill as an orchestration guide, not a rigid messaging protocol. The main agent should decide the exact shape, order, and wording of sub-agent communication based on the task, risk, and repo surface.
-
-## Use This Skill When
+### Use This Skill When
 
 - the user explicitly asks for sub-agents, delegation, or parallel agent work
-- or the task clearly benefits from orchestrated delegation with bounded ownership seams and does not conflict with higher-priority instructions
-- the task spans multiple modules or surfaces and has clear ownership seams
-- the user wants the lead agent to reduce direct implementation and focus on orchestration
+- the task spans multiple modules or surfaces with meaningful ownership seams
+- the user wants the lead agent to minimize direct implementation and focus on orchestration
 - the work needs an explicit final review after parallel implementation
-- the task has enough authority or cross-module context that planning itself should be isolated from implementation
+- planning itself carries enough global context that it should be isolated from implementation
 
-## Do Not Use This Skill When
+### Do Not Use This Skill When
 
 - the task is small enough for one focused pass
 - the write surface is too entangled to split safely
-- the next critical-path action is a single urgent blocker that the main agent should handle directly
-- the user asked for one focused audit without parallel delegation
+- the next critical-path action is a single urgent blocker the main agent should handle directly
+- the user asked for one focused audit without delegation
 
-## Main Agent Contract
+### First Rule After Trigger
 
-When preparing to delegate, the main agent will often benefit from checking the following:
+Once this skill is adopted as the governing workflow for the current action:
 
-1. Reconfirm the active task, the user's constraints, and the authoritative docs for the current repo.
-2. Read the minimum authority layer needed: `AGENTS.md`, governance/spec/plan docs, task history, and any directly affected modules.
-3. Decide whether planning should stay local or be delegated to a planner agent because the task carries a large global-context burden.
-4. Build a concrete architecture map and identify safe split points.
-5. Decide what must stay local on the critical path and what can be delegated in parallel.
-6. If a planner agent is used, treat its output as guidance for decomposition and context shaping rather than a rigid script that workers must follow mechanically.
-7. Prefer doing coordination, integration, and verification orchestration locally; avoid taking a major implementation packet unless delegation is unsafe or blocked.
-8. If a reviewer agent is available, plan from the start to hand the integrated result to that reviewer for the unified final review.
+1. read this main `SKILL.md`
+2. identify whether planner mode is needed
+3. decide what must stay local, what can be delegated, and what must wait for planner adjudication
 
-These checks are default orchestration guidance. They do not require a fixed prompt shape, fixed handoff order, or a single mandatory communication template. The main agent may probe locally first, stage the work in waves, or defer parts of this checklist when that better matches the task.
+Do not dispatch planner, worker, reviewer, or explorer packets based only on a partial front-window read of this skill.
 
-## Execution Cost Check
+### Major Orchestration Actions
 
-Before substantial execution, identify whether the task has a large execution packet.
+Treat these as major orchestration actions that require the full main `SKILL.md` first:
 
-- Treat a packet as large when it is likely to consume unusually high context or execution effort.
-- A packet usually counts as large when at least two of these are true:
-  - it will require repeated runtime probing, command retries, or environment diagnosis
-  - it will generate large raw logs, traces, or protocol evidence
-  - it will force repeated back-and-forth across multiple modules or surfaces
-  - it is likely to consume a large share of the main agent's context window or tool budget
+- dispatching a planner packet
+- dispatching any writable worker packet
+- locking packet boundaries or ownership boundaries
+- declaring planner-first sequencing
+- entering reviewer-loop or closure-stage sequencing under this skill
 
-Treat planning as a separate high-context packet when the global analysis itself is large enough that it would dilute the quality of worker packets or main-agent orchestration.
+### Skill Boundary
 
-## Dispatch Before Execution
+This skill governs:
 
-Before or during substantial execution, it is often useful to classify the work into:
+- role ownership
+- decomposition and packet boundaries
+- planner authority
+- delegation completeness
+- waiting, recovery, and ownership reclaim
+- review-loop and closure sequencing
 
-- authority and planning
-- optional planner packet, if planning has a large global-context burden
-- large execution packet, if any
-- sidecar packets
-- integration and final review
+This skill does not replace:
 
-If a large execution packet exists, assign it to a worker by default before the main agent spends too long executing it locally. It is still acceptable to do a small amount of probing first when that is the clearest way to discover the real split.
+- repo authority docs
+- repo-local quality gates
+- role documents under `roles/`
+- packet-specific scope and non-goals
 
-## Allowed Main-Agent Local Work
+## G1. Role Model And Core Contract
 
-The main agent may keep small, low-context packets locally.
+The orchestration model is main-agent-centered.
 
-- authority reading and repo triage
-- planner dispatch and planner-output review when planner mode is used
-- decomposition and worker-packet drafting
-- small deterministic glue changes
-- integration work after workers return
-- unified verification orchestration
-- narrow post-review fixes
+### `main agent`
 
-Being on the critical path is not, by itself, a reason for the main agent to keep the large execution packet.
+Primary job:
 
-## High-Context Pressure Bias
+- own task framing, authority alignment, decomposition decisions, packet dispatch, integration, and closure adjudication
 
-When the main agent is already carrying substantial context pressure, it should bias even more strongly toward orchestration and delegation rather than absorbing additional implementation work locally.
+Must do:
 
-Signals of high-context pressure may include:
+- read the authority layer needed for safe delegation
+- decide whether planner mode is needed
+- keep write ownership explicit
+- coordinate review and closure
 
-- multiple unfinished sub-agent packets
-- substantial accumulated authority, diff, or runtime evidence already held by the main agent
-- a likely upcoming need for integration, verification orchestration, or final review
-- signs that continued local execution would force more broad code reading, runtime probing, or repeated retries
-- any situation where further local implementation would materially increase the risk of context drift or compression before closure
+Must not do by default:
 
-Under this condition, the main agent should keep implementation local only when the packet is truly small and low-risk.
+- absorb the large execution packet locally just because it is on the critical path
+- silently overrule packet ownership after delegating a write surface
+- substitute itself for an available independent reviewer at final review time
 
-A packet should be treated as truly small and low-risk only when it is all of the following:
+Typical inputs:
 
-- local to a narrow ownership area
-- deterministic and unlikely to require iterative probing or retries
-- free of shared-contract or cross-packet implications
-- unlikely to require substantial new authority or code reading
-- easy to verify in a short local loop
-- unlikely to create extra integration burden if handled locally
+- user request
+- repo authority and code context
+- planner output
+- worker returns
+- reviewer findings
 
-If those conditions are not clearly met, the default under high-context pressure is to delegate the packet to a sub-agent and keep the main agent focused on coordination, staging, integration, and verification orchestration.
+Typical outputs:
 
-## Delegation Rules
+- packet definitions
+- adjudication decisions
+- integration decisions
+- final verification and closure judgment
 
-- Split by ownership boundary, not by arbitrary file count.
-- Give each worker a disjoint write set whenever possible.
-- Before dispatching more than one writable sub-agent packet, explicitly compare their intended write surfaces. If overlap remains, re-split the packets, stage them in waves, or downgrade one of them to read-only before dispatch.
-- Once a write surface has been delegated to a sub-agent, the main agent must not keep editing that same write surface in parallel.
-- If the main agent must reclaim a worker-owned write surface to unblock the critical path, it must first interrupt or close the corresponding sub-agent, then explicitly take ownership of that surface before continuing.
-- State explicit non-goals so workers do not widen scope.
-- Pass only the task-local context needed for that packet.
-- When a matching role document exists under `roles/`, the main agent must explicitly remind the delegated sub-agent to read the corresponding role document, such as `roles/<role>.md`, for baseline behavior before executing the task packet. Do not rely on the sub-agent to infer this on its own.
-- Let the main agent decide the exact sub-agent message contents. Constrain the task and boundaries, but do not over-specify wording or force one packet format when the task would benefit from a different handoff shape.
-- Prefer giving workers a strong starting point and boundary, not a frozen search space. Workers may explore within their ownership area and should escalate only when they need to cross shared contracts, shared state, or another packet's boundary.
-- Default sub-agent model to the current model used in the active user conversation. Keep the default reasoning effort at `high` or `xhigh` when available. The main agent may choose `medium` for a narrow, low-risk, and deterministic sub-agent packet when that better fits the task. If the user explicitly requests a different model or reasoning effort for a sub-agent packet, follow the user's instruction.
-- If one packet depends on another packet's output, keep the blocker local or stage the work in waves instead of pretending it is parallel.
-- When a large execution packet exists, assign it to a worker by default unless it is truly small and deterministic or delegation is unsafe or blocked.
+### `planner`
 
-## Role Documents
+Primary job:
 
-## Role Resolution
+- own read-only global decomposition judgment when planning burden is high
 
-Resolve the delegated sub-agent role by its primary responsibility in the packet, not by superficial cues such as how many files it reads or whether it mentions review.
-
-- Use a `worker` role when the packet's primary job is to implement, modify, or verify a bounded change inside an assigned write boundary.
-- Use a `reviewer` role when the packet's primary job is read-only review: finding defects, regressions, risky assumptions, weak validation, or documentation drift without directly fixing them.
-- Use a `planner` role when the packet's primary job is read-only planning, decomposition, dependency analysis, or sequencing guidance rather than implementation.
-- Use an `explorer` role when the packet's primary job is read-only evidence gathering, repo exploration, or environment inspection to support a later implementation or review packet.
-
-Choose the role by the packet's dominant responsibility. Do not classify a packet as `worker`, `reviewer`, `planner`, or `explorer` based only on whether it reads code, mentions review, or touches many files.
-
-Once the role is resolved, check whether a matching role document exists under `roles/`. If it does, the dispatch must include the explicit read-the-role-doc reminder required by this skill.
-
-Role documents under `roles/` are a reusable baseline layer for delegated sub-agents.
-
-- The main agent should decide at dispatch time whether a delegated role has a corresponding role document and, when it does, the dispatch must contain an explicit reminder for the sub-agent to read it before execution.
-- This reminder should stay generic and role-driven rather than hard-coding one specific role such as reviewer, planner, or worker into the orchestration contract.
-- The role document supplements the task packet; it does not replace packet-specific scope, non-goals, deliverables, or higher-priority authority.
-- Keep role-document use lightweight. It should improve consistency without turning delegation into a mandatory ceremony.
-- A dispatch that omits this reminder when a matching role document exists is incomplete and should be corrected before send.
-- The exact reminder wording is flexible, but omission is not: if a matching role document exists, the dispatch should contain an explicit read-the-role-doc reminder.
-
-## Optional Planner Mode
-
-Use planner mode when the task carries a large authority surface, multiple plausible split points, or a high risk of cross-packet conflict if workers infer the plan locally.
-
-Planner mode is optional. Do not force it onto small or already-obvious tasks.
-
-### Planner Responsibilities
+Must do:
 
 - read the relevant authority and current-task materials
-- build the global task picture before implementation packets are assigned
-- suggest a safe decomposition and identify what should remain with the main agent
-- mark cross-packet dependencies, shared contracts, and likely conflict areas
-- identify the minimum high-value context each worker should start from
-- flag review hot spots and verification priorities
-- surface uncertainty or challenge shaky task framing back to the main agent when a plan-level assumption looks weak or incomplete
+- propose packet boundaries, sequencing, and risks
+- identify what should remain with the main agent
 
-### Planner Non-Goals
+Must not do:
 
-- do not implement the task
-- do not replace the main agent's judgment about dispatch, staging, or integration
-- do not write a brittle step-by-step script for workers unless the task is unusually fragile
-- do not over-constrain what a worker may read inside its ownership boundary
-- do not treat the first decomposition idea as final when new evidence suggests a better split
+- implement the task
+- become a second top-level orchestrator
+- replace the main agent's final dispatch or closure authority
 
-### Planner Output Shape
+Typical inputs:
+
+- authority layer
+- current task framing
+- broad code and dependency context
+
+Typical outputs:
+
+- decomposition recommendation
+- worker starting context
+- conflict or risk map
+
+### `worker`
+
+Primary job:
+
+- implement or verify a bounded change inside an assigned write boundary
+
+Must do:
+
+- stay inside the assigned boundary
+- self-review before returning
+- report changed files, tests run, and residual risks
+
+Must not do:
+
+- widen scope silently
+- revert unrelated edits
+- cross into another packet's ownership area without escalation
+
+Typical inputs:
+
+- packet scope
+- non-goals
+- write boundary
+- role document reminder when applicable
+
+Typical outputs:
+
+- bounded implementation result
+- self-review summary
+- verification status
+
+### `reviewer`
+
+Primary job:
+
+- perform independent read-only review of the integrated result
+
+Must do:
+
+- look for defects, regressions, risky assumptions, weak validation, and drift
+
+Must not do:
+
+- fix issues directly
+- dispatch writable child agents
+
+Typical inputs:
+
+- integrated tree
+- relevant authority
+- review focus areas
+
+Typical outputs:
+
+- findings
+- residual risks
+- review completion status
+
+### `explorer`
+
+Primary job:
+
+- perform bounded read-only evidence gathering to support later implementation or review
+
+Must do:
+
+- gather facts needed for a later packet
+
+Must not do:
+
+- convert itself into implementation
+- claim broader write authority
+
+### Hard Boundary
+
+Repeat this rule wherever delegation and recovery meet:
+
+- once a write surface has been delegated, the main agent must not keep editing that same write surface in parallel
+
+## G2. Planner-First Protocol
+
+Use planner mode when the task has a large authority surface, multiple plausible split points, or a high risk of cross-packet conflict if workers infer the plan locally.
+
+Planner mode is optional for small or already-obvious tasks.
+
+### Planner-Owned Judgments
+
+When planner mode is active, planner should remain the primary owner of mainline decomposition judgment.
+
+Before planner return, the main agent should not substantially decide:
+
+- preferred backend or execution lane
+- preferred contract or continuation shape
+- preferred implementation shape
+- preferred module placement
+- worker packet boundaries
+- mainline stage order
+
+If the main agent sees a strong candidate early, it may record that only as:
+
+- a constraint
+- an open question
+- a feasibility fact
+- a contradiction requiring adjudication
+
+When entering planner-first mode, briefly state which judgments are reserved for planner and which narrow pre-planner local actions are still allowed before continuing.
+
+### Pre-Planner Local Boundary
+
+Before planner return, local work must stay framing-only, question-bounded, and non-directional.
+
+Allowed pre-planner local work:
+
+- confirm authority
+- do lightweight codebase orientation
+- identify candidate seams
+- detect obvious contradictions
+- draft the planner packet
+
+Not allowed before planner return:
+
+- a de facto worker plan
+- a preferred implementation shape
+- a preferred packet structure treated as already decided
+- mainline writable execution just because the likely direction feels obvious
+
+### Post-Planner Adjudication
+
+After planner return:
+
+- use planner output as the default basis for packet drafting and sequencing
+- review only the minimum surface needed to confirm a disagreement, contradiction, or omission
+- do not reopen planner-scale reading just to form a second local plan unless a clear gap exists
+
+### Worker In-Flight Local Boundary
+
+Once a writable worker packet is in flight, the main agent may prepare integration readiness but must not substantially design the next implementation wave before the current worker result returns and is adjudicated.
+
+Before worker return, local notes about later waves should remain only:
+
+- open seams
+- open questions
+- integration risks
+- capability or truth-boundary constraints
+
+If the main agent continues local work while a writable worker is in flight, briefly state that it is staying in integration-readiness mode and limiting itself to those note types.
+
+### Planner Output
 
 Planner output should stay concise and practical. Cover:
 
 - task understanding
 - proposed packet boundaries
 - what stays with the main agent
-- packet dependencies or sequencing constraints
-- worker starting context and key files or modules
+- sequencing constraints
 - review and verification hot spots
 
-Use this output as a decomposition aid, not as a rigid protocol.
+## G3. Dispatch And Packeting
 
-## Required Worker Instructions
+This block defines what gets delegated, what may stay local, and what every packet must carry.
 
-However the main agent chooses to communicate, every worker packet should make these constraints clear:
+### Execution Cost Check
+
+Treat a packet as large when at least two of these are true:
+
+- it will require repeated runtime probing, command retries, or environment diagnosis
+- it will generate large raw logs, traces, or protocol evidence
+- it will force repeated back-and-forth across multiple modules or surfaces
+- it is likely to consume a large share of the main agent's context window or tool budget
+
+When a large execution packet exists, assign it to a worker by default unless delegation is unsafe or the packet is truly tiny and deterministic.
+
+### What May Stay Local
+
+The main agent may keep only narrow, low-context work locally:
+
+- authority reading and repo triage
+- planner dispatch and planner-output adjudication
+- packet drafting
+- small deterministic glue changes
+- integration after workers return
+- unified verification orchestration
+- truly tiny post-review fixes after explicit adjudication
+
+Before dispatching a writable worker packet, briefly state the delegated write boundary and the local work that will remain with the main agent.
+
+### High-Context Pressure Bias
+
+When the main agent is already under substantial context pressure, bias even more strongly toward orchestration and delegation.
+
+Implementation should stay local only when the packet is clearly:
+
+- narrow
+- deterministic
+- single-boundary
+- low-read
+- easy to verify in a short local loop
+
+### Role Resolution
+
+Resolve delegated roles by dominant responsibility:
+
+- `worker` for bounded implementation or writable verification
+- `reviewer` for read-only review
+- `planner` for read-only planning and decomposition
+- `explorer` for read-only evidence gathering
+
+### Dispatch Completeness
+
+Every delegated packet should contain:
+
+- role
+- scope
+- non-goals
+- ownership or write boundary
+- expected deliverable
+- escalation path for boundary problems
+
+### Role-Doc Dispatch Gate
+
+If a matching role document exists under `roles/`, the packet must include:
+
+- the role-doc path
+- a start rule: read that role doc before execution
+
+If those items are missing, the packet is incomplete and should not be dispatched.
+
+Node trigger before dispatch: explicitly state that you are attaching the matching `roles/<role>.md` file and requiring read-before-execution.
+
+The main agent should not preload role-document contents into its own context by default merely because those files exist.
+
+### Required Worker Constraints
+
+Every worker packet should make these constraints explicit:
 
 - you are not alone in the codebase
 - do not revert edits made by others
@@ -194,49 +372,172 @@ However the main agent chooses to communicate, every worker packet should make t
 - report changed files, tests run, and residual risks
 - surface uncertainty instead of silently widening scope
 
-Workers should usually treat the main agent as the adjudication point for boundary questions, unclear assumptions, or suspected upstream mistakes. This is a flexibility aid, not a mandatory pause-before-action rule: workers may still make small local decisions inside their ownership area.
+### Bounded Sub-Delegation
 
-Use `references/worker-packet-template.md` only as an optional drafting aid when it helps. Do not treat it as a mandatory wrapper.
+Sub-delegation is allowed only inside the parent packet boundary.
 
-## Main Agent Review Loop
+- writable child agents must stay inside the parent's write boundary
+- broader ownership or reshaping must escalate back to the top-level main agent
+- reviewer may use only read-only child agents
+
+## G4. In-Flight Control
+
+This block governs waiting, progress checks, recovery, and ownership reclaim.
+
+### Waiting Baseline
+
+For substantial `worker`, `reviewer`, and `planner` packets, a single waiting round should default to no less than `10 minutes`.
+
+This is a patience floor, not a reclaim trigger.
+
+### Progress Checks
+
+Progress checks should usually be non-interrupt status requests.
+
+Within one waiting round:
+
+- default to at most one non-interrupt progress check unless a new concrete reason appears
+
+A progress check should determine:
+
+- what the sub-agent is currently doing
+- whether it is still inside boundary
+- what remains before closure-ready return
+- whether there is a concrete blocker
+- whether packet shape is wrong
+
+Before sending a progress check or considering recovery, briefly state the current waiting rule and the specific evidence you are still trying to collect.
+
+### Healthy Progress
+
+Continue waiting when the sub-agent still provides:
+
+- a concrete current step
+- a clear description of what remains
+- confirmation that it is still inside boundary
+- a credible next step
+- a coherent explanation for why the work is still in reading, comparison, testing, or implementation
+
+Unchanged files, missing timestamps, and lack of landed edits are weak signals only.
+
+### Recovery Evidence
+
+Recovery may be justified only by stronger evidence such as:
+
+- explicit tool or environment failure
+- explicit blocked status
+- packet-shape failure
+- sustained no-progress after three or more rounds with weak or repetitive status
+
+This is not a timeout problem by default. It is an evidence problem.
+
+### Final Gate Before Recovery
+
+Before interrupting or closing a packet, make one last explicit judgment.
+
+If the latest signal still says, concretely:
+
+- I am still implementing or reviewing
+- I am still inside boundary
+- I still have a coherent path to completion
+
+then continue waiting.
+
+If the latest signal says, concretely:
+
+- I am blocked
+- this packet cannot close inside boundary
+- I must cross another ownership surface
+- I cannot explain a credible next step
+
+then recovery may be appropriate.
+
+### Interrupt, Close, And Ownership Reclaim
+
+`interrupt-now` and `close_agent` are recovery tools, not speed tools.
+
+Use them only when:
+
+- recovery evidence is present
+- the write surface must be formally reclaimed
+- the packet is mis-split or blocked
+- the user or environment forced immediate recovery
+
+Repeat this rule wherever delegation and recovery meet:
+
+- do not disguise ownership reclaim as a time-based failure judgment
+
+## G5. Review And Closure Loop
+
+This block governs integration, reviewer-loop sequencing, post-review fixes, and final closure.
+
+### Main Review Loop
 
 After workers return:
 
-1. Read each result and inspect the changed files.
-2. Resolve cross-worker contract mismatches before running broad verification.
-3. Run the required tests and quality gates on the integrated tree.
-4. If a reviewer agent is available, ask that reviewer to independently review the current integrated result. The main agent should not present itself as the final reviewer in that case.
-5. Reviewer dispatch does not end the main agent's responsibility for the task. The main agent remains responsible for driving the task forward, coordinating any further packets needed, and adjudicating the reviewer outcome.
-6. The main agent may continue coordinating additional worker, explorer, or planner packets as needed before closure.
-7. However, the main agent must not enter closure, finalize governance/task records, or present the task as complete until the reviewer has returned and the reviewer outcome has been adjudicated.
-8. If no reviewer agent is available, perform the total review locally for correctness, regressions, security boundaries, missing tests, architecture drift, and doc drift.
-9. If review or adjudication leaves blocking issues unresolved, continue execution or investigation rather than closing. Keep the fix local only when the remaining work still clearly qualifies as tiny, local, and deterministic under the current context state. When high-context pressure is already present, this bias toward re-delegation should be even stronger. Do not close on top of known integration defects.
-10. Closure is allowed only when the review-adjudicated outcome is one of:
-   - no blocking defects remain, or
-   - remaining blockers have been explicitly surfaced, judged acceptable to leave unresolved for this task, and reported as residual risk.
-11. Close with explicit verification status, reviewer completion status, adjudication status, and residual risks.
+1. inspect each result and changed file
+2. resolve cross-worker contract mismatches
+3. run only targeted pre-review verification needed for the current integration state
+4. if a reviewer is available, dispatch independent review
+5. keep broad final gates for the closure-candidate tree, not for a tree still inside a reviewer-triggered fix loop
 
-Reviewer feedback is not limited to code defects. A reviewer may also challenge planner assumptions, packet boundaries, integration choices, or other upstream decisions when they appear to weaken the result. The main agent remains responsible for adjudicating those challenges and deciding whether to re-split, revise, or proceed.
+### Reviewer Truth
 
-## Default Communication Pattern
+Repeat this rule wherever worker self-review and reviewer-loop meet:
 
-Prefer this communication order when it helps, but deviate freely when the task calls for a different orchestration shape:
+- worker self-review is required, but it is not the unified final review
 
-1. short kickoff update with the first authority-reading step
-2. concise decomposition plan with worker ownership, and planner involvement when used
-3. progress updates as workers run and as integration happens
-4. final handoff with merged outcome, verification, and residual risk
+When a reviewer is available, the main agent should not silently substitute itself for that final unified review unless the user explicitly asks for that exception.
 
-## Practical Guardrails
+Before entering unified review, briefly state whether reviewer-led final review is required for this run and why.
 
-- Re-check authority after context compression, handoff, or long-running parallel work.
-- Keep planner output high-signal and lightweight; if the planner becomes a second full orchestrator or dumps generic prose, collapse back to direct main-agent decomposition.
-- Keep worker prompts concrete enough that integration does not depend on guesswork.
-- Do not let the skill's suggested communication flow override a clearly better task-specific orchestration choice by the main agent.
-- Do not turn planner mode into a mandatory ceremony. If the split is already obvious, skip it.
-- Do not confuse worker context shaping with hard visibility limits. The goal is to reduce noise, not to forbid local exploration inside the assigned boundary.
-- Allow planner, worker, and reviewer agents to push uncertainty or challenges back to the main agent without turning that feedback path into a mandatory approval loop for every small decision.
-- Do not confuse a worker self-review with the unified final review. Both are required.
-- When a reviewer agent is available, do not let the main agent silently substitute itself for that final unified review unless the user explicitly asks for that exception.
-- When the repo uses governance docs, update task records and audits in the same round as closure, but only after review adjudication permits closure.
-- If the main agent notices it has drifted into a high-context execution loop that should have been delegated, stop, re-decompose, and hand the remaining large execution packet to a worker instead of continuing by inertia.
+### Post-Review Fix Adjudication
+
+After reviewer return, explicitly decide whether the fix stays local or is delegated.
+
+That adjudication must state:
+
+- `fix owner`
+- `reason`
+- `allowed write scope`
+
+Local post-review fixes are allowed only when the remaining work is truly tiny, narrow, single-boundary, deterministic, and easy to verify in a short local loop.
+
+If it does not clearly qualify as tiny, delegate a narrow follow-up worker packet.
+
+Before choosing a local post-review fix, briefly state the `fix owner`, the reason, and why the remaining work does or does not satisfy the tiny-fix threshold.
+
+### Closure Readiness
+
+Do not enter closure while reviewer-found blocking work remains.
+
+Closure is ready only when:
+
+- no blocking defects remain, or
+- remaining blockers were explicitly surfaced, judged acceptable for this task, and reported as residual risk
+
+### Final Broad Gates And Final Docs
+
+If the repo uses closure-stage broad quality gates such as `build`, `ci`, or equivalent, those gates must run and pass on the closure-candidate tree before final completed-state governance/task/doc synchronization is written.
+
+Repeat this rule wherever review and closure meet:
+
+- final completed-state documentation must not be written as a substitute for real closure readiness
+
+If broad gates fail after completed-state docs were written, those docs are stale and must be corrected before closure is claimed.
+
+## G6. Low-Frequency References
+
+Use the items below only when the current action needs them.
+
+### `references/worker-packet-template.md`
+
+Use only as an optional drafting aid when it helps packet writing.
+
+Do not treat it as a mandatory wrapper.
+
+### `references/communication-patterns.md`
+
+Use when you want example kickoff, planner handoff, progress-update, or final-handoff shapes.
+
+Do not let message examples override the hard role, ownership, waiting, or closure rules in this main `SKILL.md`.

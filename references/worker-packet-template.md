@@ -6,6 +6,8 @@ Use this template only when it helps assign a bounded implementation packet to a
 
 - Goal:
 - Ownership:
+- Role Baseline Doc:
+- Execution Start Rule: read the role doc before execution
 - Files or modules allowed to change:
 - Files or modules that are out of scope:
 - Required context already checked by main agent:

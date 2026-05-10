@@ -1,7 +1,7 @@
 interface:
   display_name: "Main/Sub-Agent Orchestration"
-  short_description: "Optionally use a planner, delegate workers, then integrate and review"
-  default_prompt: "Use $main-subagent-orchestration to decide whether this task needs a planner, choose the right handoff shape for each sub-agent, split the work into bounded worker packets when useful, keep the main agent focused on orchestration, and finish with an integration review."
+  short_description: "Planner-first orchestration, bounded packets, and review closure."
+  default_prompt: "Use $main-subagent-orchestration to adopt planner-first orchestration for this task, read the full main skill before major orchestration actions, keep the main agent focused on bounded delegation and evidence-based recovery, and close through independent review when available. Before dispatching any planner, worker, reviewer, or explorer packet, attach the matching roles/<role>.md path and require the sub-agent to read it before execution."
 
 policy:
   allow_implicit_invocation: true

@@ -83,6 +83,20 @@ Do not optimize for plan length or apparent completeness. Optimize for a plan th
 - If multiple decompositions are plausible, compare them briefly and recommend one.
 - Use the main agent as the adjudication point for unresolved tradeoffs or authority conflicts.
 
+## Sub-Delegation Boundary
+
+- You may sub-delegate only in support of your assigned planning packet.
+- Any child agent you dispatch should normally be read-only.
+- If a writable child agent is considered, it must still stay entirely within the planning packet's assigned boundary and must not become mainline implementation by side effect.
+- You must not use child agents to silently convert planning work into execution work outside the top-level main agent's adjudication.
+- If your planning packet suggests broader ownership or execution reshaping, return that recommendation to the main agent instead of instantiating it yourself.
+- Before dispatching a child agent, explicitly determine:
+  - `parent packet boundary`
+  - `child role`
+  - `child scope`
+  - `child write scope` or `read-only`
+  - `why sub-delegation is needed`
+
 ## Output Expectations
 
 Return a concise planning handoff that covers:

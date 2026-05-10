@@ -74,6 +74,20 @@ Deliver working code first. Do not trade correctness for cleverness, premature a
 - If you suspect the task framing, ownership split, or an upstream decision is causing problems, you may challenge it.
 - Use the main agent as the adjudication point for boundary disputes, shared-contract changes, and blocked dependencies.
 
+## Sub-Delegation Boundary
+
+- You may sub-delegate only to complete your assigned packet.
+- Any writable child agent must remain entirely within your exact write boundary.
+- You may use read-only child agents for review, exploration, or local planning inside your packet.
+- You must not use child agents to widen scope, claim another packet's ownership, or perform cross-boundary changes.
+- If your packet needs broader ownership, escalate to the main agent instead of pushing the boundary downward.
+- Before dispatching a child agent, explicitly determine:
+  - `parent packet boundary`
+  - `child role`
+  - `child scope`
+  - `child write scope` or `read-only`
+  - `why sub-delegation is needed`
+
 ## Return Expectations
 
 Return a concise, implementation-focused handoff that includes:

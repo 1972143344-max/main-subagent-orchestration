@@ -30,6 +30,19 @@ Focus on material issues first. Do not spend the review budget on minor style co
 - If something is ambiguous, under-specified, or evidence is missing, ask the main agent for clarification rather than guessing.
 - Use the main agent as the adjudication point for task-boundary disputes or uncertain upstream decisions.
 
+## Sub-Delegation Boundary
+
+- You may sub-delegate only for read-only review support inside your assigned review packet.
+- You must not dispatch writable child agents.
+- You must not use child agents to fix code, expand the packet into implementation, or re-own the task.
+- If review reveals a need for follow-up implementation or broader packet changes, return that to the main agent.
+- Before dispatching a child agent, explicitly determine:
+  - `parent packet boundary`
+  - `child role`
+  - `child scope`
+  - `read-only`
+  - `why sub-delegation is needed`
+
 ## Output Expectations
 
 Present findings first.
