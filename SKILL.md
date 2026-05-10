@@ -337,6 +337,20 @@ Resolve delegated roles by dominant responsibility:
 - `planner` for read-only planning and decomposition
 - `explorer` for read-only evidence gathering
 
+### First-Layer Packet Gate
+
+When the top-level main agent dispatches first-layer packets, those packets must be mutually exclusive.
+
+Do not send the same top-level mission to multiple first-layer agents and expect them to subdivide it correctly on their own.
+
+In particular:
+
+- first-layer packets must not restate the entire top-level task to multiple agents
+- first-layer packets must already be partitioned at the top level into non-overlapping packet scopes
+- if multiple first-layer agents are used, each one should receive only its own packet scope, not the full mission plus a hope that it will self-narrow correctly
+
+Node trigger before first-layer dispatch: explicitly confirm that the first-layer packets are mutually exclusive and are not restating the same full mission.
+
 ### Dispatch Completeness
 
 Every delegated packet should contain:
