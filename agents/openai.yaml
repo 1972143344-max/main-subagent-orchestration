@@ -1,7 +1,7 @@
 interface:
   display_name: "Main/Sub-Agent Orchestration"
-  short_description: "Planner-first orchestration, bounded packets, and review closure."
-  default_prompt: "Use $main-subagent-orchestration to adopt planner-first orchestration for this task, read the full main skill before major orchestration actions, keep the main agent focused on bounded delegation and evidence-based recovery, and close through independent review when available. Before dispatching any planner, worker, reviewer, or explorer packet, attach the matching roles/<role>.md path and require the sub-agent to read it before execution."
+  short_description: "Planner-first orchestration, bounded packets, bounded delegate autonomy, and review closure."
+  default_prompt: "Use $main-subagent-orchestration to adopt planner-first orchestration for this task, read the full main skill before major orchestration actions, and start by explicitly determining whether you are the top-level main agent, an ordinary delegated child, or a delegate-orchestrator. If you are the top-level main agent and are about to draft packets, dispatch, judge recovery, or close, read roles/main-agent.md to reinforce main-agent-only boundaries. Keep the main agent focused on bounded delegation, explicit fork_context and sub-delegation decisions, evidence-based recovery, and final closure authority. Before dispatching any planner, worker, reviewer, explorer, or delegate-orchestrator packet, attach the matching roles/<role>.md path and require the sub-agent to read it before execution."
 
 policy:
   allow_implicit_invocation: true

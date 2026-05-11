@@ -38,16 +38,28 @@ Do not optimize for broad repo reading or verbose reporting. Optimize for high-v
 
 ## Sub-Delegation Boundary
 
+- Do not sub-delegate by default.
+- Treat sub-delegation as unavailable unless one of the following is true:
+  - the parent packet explicitly pre-authorized it
+  - the parent or main agent explicitly approved it after you escalated back
+- Default interpretation: sub-delegation extends your exploration role, so the child should normally use the same role type.
+- Use sub-delegation only when there is a clear secondary exploration sub-problem inside your packet and the child is needed to complete your exploration handoff.
+- Do not use sub-delegation to widen the packet, begin implementation, or create a new exploration hierarchy without explicit authorization.
+- If the parent packet or later approval explicitly authorizes bounded internal orchestration, the child role may differ; otherwise keep the child as the same role type.
+- If neither authorization path is present, do not spawn a child agent. Escalate back first.
 - You may sub-delegate only in support of your assigned exploration packet.
 - Child agents you dispatch should normally be read-only.
 - You must not use child agents to begin implementation, claim write ownership, or widen the task beyond the exploration packet.
 - If exploration reveals a need for broader ownership or execution, escalate to the main agent.
+- If you believe a child packet is needed and it was not pre-authorized, explicitly report that need upward before any child dispatch.
 - Before dispatching a child agent, explicitly determine:
   - `parent packet boundary`
   - `child role`
   - `child scope`
   - `child write scope` or `read-only`
   - `why sub-delegation is needed`
+  - `why local completion is no longer the better path`
+  - `same-role extension` or `bounded internal orchestration exception`
 
 ## Output Expectations
 

@@ -32,16 +32,28 @@ Focus on material issues first. Do not spend the review budget on minor style co
 
 ## Sub-Delegation Boundary
 
+- Do not sub-delegate by default.
+- Treat sub-delegation as unavailable unless one of the following is true:
+  - the parent packet explicitly pre-authorized it
+  - the parent or main agent explicitly approved it after you escalated back
+- Default interpretation: sub-delegation extends your review role, so the child should normally use the same role type.
+- Use sub-delegation only for a clear secondary read-only review sub-problem inside your packet.
+- Do not use sub-delegation to broaden the review packet, reframe it into implementation, or create a new review hierarchy without explicit authorization.
+- If the parent packet or later approval explicitly authorizes bounded internal orchestration, the child role may differ; otherwise keep the child as the same role type.
+- If neither authorization path is present, do not spawn a child agent. Escalate back first.
 - You may sub-delegate only for read-only review support inside your assigned review packet.
 - You must not dispatch writable child agents.
 - You must not use child agents to fix code, expand the packet into implementation, or re-own the task.
 - If review reveals a need for follow-up implementation or broader packet changes, return that to the main agent.
+- If you believe a child packet is needed and it was not pre-authorized, explicitly report that need upward before any child dispatch.
 - Before dispatching a child agent, explicitly determine:
   - `parent packet boundary`
   - `child role`
   - `child scope`
   - `read-only`
   - `why sub-delegation is needed`
+  - `why local completion is no longer the better path`
+  - `same-role extension` or `bounded internal orchestration exception`
 
 ## Output Expectations
 

@@ -85,17 +85,28 @@ Do not optimize for plan length or apparent completeness. Optimize for a plan th
 
 ## Sub-Delegation Boundary
 
-- You may sub-delegate only in support of your assigned planning packet.
+- Do not sub-delegate by default.
+- Treat sub-delegation as unavailable unless one of the following is true:
+  - the parent packet explicitly pre-authorized it
+  - the parent or main agent explicitly approved it after you escalated back
+- Default interpretation: sub-delegation extends your planning role, so the child should normally use the same role type.
+- Use sub-delegation only when there is a clear secondary planning sub-problem inside your packet and the child will help complete your planning deliverable.
+- Do not use sub-delegation to create a new planning hierarchy, broaden ownership, or convert planning into implementation by side effect.
+- If the parent packet or later approval explicitly authorizes bounded internal orchestration, the child role may differ; otherwise keep the child as the same role type.
+- If neither authorization path is present, do not spawn a child agent. Escalate back first.
 - Any child agent you dispatch should normally be read-only.
 - If a writable child agent is considered, it must still stay entirely within the planning packet's assigned boundary and must not become mainline implementation by side effect.
 - You must not use child agents to silently convert planning work into execution work outside the top-level main agent's adjudication.
 - If your planning packet suggests broader ownership or execution reshaping, return that recommendation to the main agent instead of instantiating it yourself.
+- If you believe a child packet is needed and it was not pre-authorized, explicitly report that need upward before any child dispatch.
 - Before dispatching a child agent, explicitly determine:
   - `parent packet boundary`
   - `child role`
   - `child scope`
   - `child write scope` or `read-only`
   - `why sub-delegation is needed`
+  - `why local completion is no longer the better path`
+  - `same-role extension` or `bounded internal orchestration exception`
 
 ## Output Expectations
 

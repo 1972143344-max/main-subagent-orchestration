@@ -1,6 +1,6 @@
 ---
 name: main-subagent-orchestration
-description: Orchestrate coding work through a main agent that reads authority first, optionally uses a planner for high-context decomposition, decomposes a non-trivial task into bounded sub-agent packets, requires worker self-review, and routes the final unified review to an independent reviewer agent when available. Use when the user explicitly wants sub-agents, delegation, or a workflow like "main agent orchestration + optional planner + sub-agent implementation + total review closure", and wants the lead agent to minimize direct implementation work. If this skill is triggered and adopted as the governing workflow for the current action, read the full SKILL.md before the first major orchestration action.
+description: Orchestrate coding work through a main agent that reads authority first, optionally uses a planner for high-context decomposition, decomposes a non-trivial task into bounded sub-agent packets, may explicitly grant one bounded internal lane to a `delegate-orchestrator`, requires worker self-review, and routes the final unified review to an independent reviewer agent when available. Use when the user explicitly wants sub-agents, delegation, or a workflow like "main agent orchestration + optional planner + sub-agent implementation + total review closure", and wants the lead agent to minimize direct implementation work while retaining top-level closure authority. If this skill is triggered and adopted as the governing workflow for the current action, read the full SKILL.md before the first major orchestration action.
 ---
 
 # Main/Sub-Agent Orchestration
@@ -16,6 +16,7 @@ Use this skill when the lead agent should behave primarily as an orchestrator ra
 - the user wants the lead agent to minimize direct implementation and focus on orchestration
 - the work needs an explicit final review after parallel implementation
 - planning itself carries enough global context that it should be isolated from implementation
+- the main agent may need to hand one bounded internal lane to a locally autonomous `delegate-orchestrator` while keeping top-level ownership and closure authority
 
 ### Do Not Use This Skill When
 
@@ -32,7 +33,7 @@ Once this skill is adopted as the governing workflow for the current action:
 2. identify whether planner mode is needed
 3. decide what must stay local, what can be delegated, and what must wait for planner adjudication
 
-Do not dispatch planner, worker, reviewer, or explorer packets based only on a partial front-window read of this skill.
+Do not dispatch planner, worker, reviewer, explorer, or `delegate-orchestrator` packets based only on a partial front-window read of this skill.
 
 ### Major Orchestration Actions
 
@@ -40,6 +41,7 @@ Treat these as major orchestration actions that require the full main `SKILL.md`
 
 - dispatching a planner packet
 - dispatching any writable worker packet
+- dispatching a `delegate-orchestrator` packet
 - locking packet boundaries or ownership boundaries
 - declaring planner-first sequencing
 - entering reviewer-loop or closure-stage sequencing under this skill
@@ -61,6 +63,44 @@ This skill does not replace:
 - repo-local quality gates
 - role documents under `roles/`
 - packet-specific scope and non-goals
+
+## G0.5 Role Identity Gate
+
+Before any major orchestration action under this skill, explicitly determine your current role identity in the current run.
+
+Possible identities:
+
+- `top-level main agent`
+- `ordinary delegated child` such as `worker`, `planner`, `reviewer`, or `explorer`
+- `delegate-orchestrator`
+
+Then explicitly state:
+
+- which role you are
+- which authority you do have
+- which authority you do not have
+- whether you currently have packet-dispatch authority
+- whether you currently have bounded local autonomy
+- whether you still retain final closure authority
+
+Default interpretation:
+
+- only the `top-level main agent` owns top-level decomposition, first-layer packet dispatch, and final closure adjudication
+- an `ordinary delegated child` does not inherit those authorities
+- a `delegate-orchestrator` has only the bounded local autonomy explicitly granted by its parent packet and does not become a second top-level main agent
+
+Node trigger before the first major orchestration action: explicitly state your current role identity and the authority boundaries that follow from it.
+
+Read `roles/main-agent.md` when:
+
+- you identified yourself as the `top-level main agent`
+- and you are about to perform packet drafting, dispatch, waiting or recovery judgment, or closure work
+
+Skip `roles/main-agent.md` when:
+
+- you are an ordinary delegated child
+- or you are a `delegate-orchestrator`
+- or no major orchestration action is about to occur
 
 ## G1. Role Model And Core Contract
 
@@ -203,6 +243,42 @@ Must not do:
 - convert itself into implementation
 - claim broader write authority
 
+### `delegate-orchestrator`
+
+Primary job:
+
+- own a bounded internal execution lane that is too large or too multi-surface for one narrow packet, while staying strictly inside a parent packet boundary granted by the main agent
+
+Must do:
+
+- execute only inside the granted parent packet boundary
+- use local decomposition only to complete that bounded lane
+- keep child ownership, write scope, and escalation triggers explicit
+- integrate child results and return one closure-ready handoff to the main agent
+
+Must not do:
+
+- become a second top-level main agent
+- rewrite the user goal, top-level task framing, or closure standard
+- expand beyond the granted boundary
+- silently grant itself broader autonomy than the packet explicitly allowed
+
+Typical inputs:
+
+- bounded parent packet
+- explicit autonomy grant
+- allowed child roles
+- write policy
+- escalation triggers
+- return contract
+
+Typical outputs:
+
+- bounded internal packet plan
+- child dispatches inside the granted boundary
+- integrated result for that lane
+- residual risks and escalation points
+
 ### Hard Boundary
 
 Repeat this rule wherever delegation and recovery meet:
@@ -291,6 +367,22 @@ Planner output should stay concise and practical. Cover:
 
 This block defines what gets delegated, what may stay local, and what every packet must carry.
 
+### Fork-Context Default
+
+`fork_context:false` is the default hard rule for delegated packets.
+
+Use this default to preserve sub-agent context isolation and keep the child focused on its own packet instead of inheriting the parent thread's broader orchestration state.
+
+Use `fork_context:true` only when the packet cannot be made self-contained without losing task-critical local observations.
+
+If `fork_context:true` is used, the main agent must explicitly state:
+
+- that it is intentionally breaking the default context-isolation rule
+- why the packet cannot be made self-contained
+- which task-critical local observations require the full-history fork
+
+Node trigger before dispatch: explicitly state whether `fork_context` is `false` for sub-agent context isolation or `true` as a justified exception.
+
 ### Execution Cost Check
 
 Treat a packet as large when at least two of these are true:
@@ -336,6 +428,7 @@ Resolve delegated roles by dominant responsibility:
 - `reviewer` for read-only review
 - `planner` for read-only planning and decomposition
 - `explorer` for read-only evidence gathering
+- `delegate-orchestrator` for a bounded internal execution lane that the main agent explicitly wants to run with local autonomy inside a parent packet boundary
 
 ### First-Layer Packet Gate
 
@@ -362,6 +455,16 @@ Every delegated packet should contain:
 - expected deliverable
 - escalation path for boundary problems
 
+If the delegated role is `delegate-orchestrator`, the packet must also contain:
+
+- explicit autonomy grant
+- parent packet boundary
+- allowed child roles
+- sub-delegation mode
+- write policy
+- escalation triggers
+- return contract
+
 ### Role-Doc Dispatch Gate
 
 If a matching role document exists under `roles/`, the packet must include:
@@ -374,6 +477,31 @@ If those items are missing, the packet is incomplete and should not be dispatche
 Node trigger before dispatch: explicitly state that you are attaching the matching `roles/<role>.md` file and requiring read-before-execution.
 
 The main agent should not preload role-document contents into its own context by default merely because those files exist.
+
+### Autonomous Delegate Packets
+
+`delegate-orchestrator` is not a default substitute for the existing four roles.
+
+Use it only when:
+
+- the lane is still bounded enough to fit one parent packet
+- the lane is too multi-surface or too internally decomposable for one narrow worker, reviewer, planner, or explorer packet
+- the main agent explicitly wants to hand down bounded local orchestration instead of retaining that decomposition work at the top level
+
+Do not use it when:
+
+- one narrow role packet is already sufficient
+- the lane boundary is still unclear
+- the packet would need to rewrite top-level sequencing or closure standards
+- the real problem is broad uncertainty that should stay with planner or the main agent
+
+Hard boundary:
+
+- `delegate-orchestrator` may coordinate child packets only inside the granted parent packet boundary
+- it does not become a second top-level main agent
+- it does not inherit authority to change the user goal, broaden ownership, or replace final closure adjudication
+
+Node trigger before dispatching a `delegate-orchestrator` packet: explicitly state that bounded local autonomy is being granted, and list the granted boundary, allowed child roles, write policy, escalation triggers, and return contract.
 
 ### Required Worker Constraints
 
@@ -388,11 +516,85 @@ Every worker packet should make these constraints explicit:
 
 ### Bounded Sub-Delegation
 
-Sub-delegation is allowed only inside the parent packet boundary.
+Sub-delegation is not a default behavior.
 
+The top-level main agent must explicitly state each packet's `sub-delegation policy` at dispatch time.
+
+If a packet does not explicitly state a `sub-delegation policy`, treat it as:
+
+- `not authorized unless you escalate back`
+
+Default interpretation:
+
+- sub-delegation is an extension of the current delegated role
+- child agents should therefore normally use the same role type as the parent sub-agent
+
+There are only two valid authorization paths:
+
+1. `pre-authorized`
+   - the parent packet explicitly authorizes sub-delegation in advance
+   - the allowed child role, read/write mode, boundary, and purpose should be stated
+2. `authorized after escalation back`
+   - the child agent discovers during execution that a child packet appears necessary
+   - it must not spawn the child directly
+   - it must escalate back to the parent or main agent first
+   - the parent or main agent must explicitly approve the child dispatch before it happens
+
+### Main-Agent Authorization Gate
+
+The main agent may explicitly pre-authorize sub-delegation only when:
+
+- the parent packet boundary is already stable enough to delegate safely
+- the likely child work is expected to stay fully inside that boundary
+- the allowed child roles, read/write mode, and escalation triggers can be stated up front
+- the child need is structural and plausible at dispatch time, not just speculative parallelism
+- top-level closure authority will still remain with the main agent
+
+Do not explicitly pre-authorize sub-delegation when:
+
+- the parent packet boundary is still unclear
+- the possible child need is only hypothetical
+- the likely child work may escape into shared-contract or cross-packet reshaping
+- the parent packet should really be reframed as a different first-layer packet instead
+- the grant would effectively create undeclared bounded autonomy that should instead be expressed through a `delegate-orchestrator` packet
+
+Node trigger before granting `pre-authorized` sub-delegation: explicitly state why pre-authorization is warranted and list the allowed child roles, read/write mode, boundary, escalation triggers, and return expectations that will govern that child work.
+
+Use sub-delegation when:
+
+- there is a clear secondary sub-problem fully inside the parent packet boundary
+- the child packet is needed to help complete the parent packet's current role task
+- local completion would create meaningful context pressure, reading burden, or waiting cost inside the parent packet
+- the child result still rolls into the parent packet's own deliverable instead of redefining it
+
+Do not use sub-delegation when:
+
+- there is no clear secondary boundary
+- the real goal is broad parallelism rather than a bounded child packet
+- the child would need to cross the parent packet boundary or widen ownership
+- the child would convert a read-only packet into implementation by side effect
+- the child dispatch would turn the parent packet into a de facto new top-level orchestrator without explicit authorization
+- the parent packet is already small enough that local completion is cheaper and clearer
+
+When sub-delegation is explicitly authorized:
+
+- it must stay entirely inside the parent packet boundary
 - writable child agents must stay inside the parent's write boundary
 - broader ownership or reshaping must escalate back to the top-level main agent
 - reviewer may use only read-only child agents
+- if the parent packet or later approval explicitly authorizes bounded internal orchestration, the child role may differ from the parent role
+- otherwise, keep the child as the same role type as the parent sub-agent
+
+If the packet does not pre-authorize sub-delegation, the child agent must escalate back before spawning another agent.
+
+Node trigger before dispatch: explicitly state the packet's `sub-delegation policy`.
+
+Node trigger before approving child dispatch: explicitly state whether the child packet is:
+
+- `pre-authorized`
+- or `authorized after escalation back`
+
+Node trigger before child dispatch: explicitly state why the child packet is needed, and whether the child is a same-role extension or an explicitly authorized bounded internal orchestration exception.
 
 ## G4. In-Flight Control
 
