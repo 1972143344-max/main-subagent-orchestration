@@ -2,97 +2,133 @@
 
 [中文说明](./README.zh-CN.md)
 
-This repository contains a Codex skill for planner-first orchestration: the lead agent stays focused on authority, decomposition, dispatch, integration, waiting/recovery judgment, and final closure instead of drifting into being the primary implementer.
+This repository packages a Codex skill for planner-first, role-disciplined multi-agent orchestration. The current design treats the lead agent as a top-level orchestrator that owns authority, stage routing, packet boundaries, waiting and recovery judgment, review sequencing, and final closure, while keeping direct implementation local only for genuinely tiny work.
 
 ## Architecture
 
 ```mermaid
 flowchart TD
-    A["Skill Trigger"] --> B["SKILL.md<br/>high-frequency orchestration contract"]
-    B --> C{"Need planner-first?"}
-    C -- "yes" --> D["planner packet<br/>read-only decomposition owner"]
-    C -- "no" --> E["direct packet drafting"]
-    D --> E
-    E --> F["dispatch gate<br/>attach matching roles/<role>.md"]
-    F --> G["worker / reviewer / explorer"]
-    G --> H["main-agent integration"]
-    H --> I["independent reviewer loop<br/>when available"]
-    I --> J["closure-ready result"]
+    A["Skill Trigger"] --> B["SKILL.md<br/>front door + runtime router"]
+    B --> C["role identity gate<br/>top-level main agent / child / delegate-orchestrator"]
+    C --> D{"which stage governs next?"}
+    D --> E["planner-first.md<br/>planner-owned decomposition"]
+    D --> F["dispatch-and-delegation.md<br/>packet boundaries + fork_context + sub-delegation"]
+    D --> G["waiting-and-recovery.md<br/>evidence-driven waiting and reclaim"]
+    D --> H["review-and-closure.md<br/>review loop + closure readiness"]
+    F --> I["roles/<role>.md<br/>role-specific execution baseline"]
+    I --> J["planner / worker / reviewer / explorer / delegate-orchestrator"]
     B --> K["references/<br/>optional drafting aids only"]
+    J --> G
+    G --> H
 ```
 
 ## Repository Layout
 
-- `SKILL.md`: the main orchestration contract
-- `agents/openai.yaml`: entry metadata and default prompt
-- `roles/`: role baselines for `planner`, `worker`, `reviewer`, and `explorer`
-- `references/communication-patterns.md`: optional wording aid for handoffs and updates
-- `references/worker-packet-template.md`: optional structured packet template
+```text
+main-subagent-orchestration/
+  README.md
+  README.zh-CN.md
+  SKILL.md
+  planner-first.md
+  dispatch-and-delegation.md
+  waiting-and-recovery.md
+  review-and-closure.md
+  agents/
+    openai.yaml
+  roles/
+    main-agent.md
+    planner.md
+    worker.md
+    reviewer.md
+    explorer.md
+    delegate-orchestrator.md
+  references/
+    communication-patterns.md
+    worker-packet-template.md
+```
 
-## Core Design Ideas
+## Design Highlights
 
-### 1. Keep high-frequency rules in one place
+### 1. The main skill is a router, not a giant monolith
 
-The main `SKILL.md` owns the runtime rules that the lead agent is most likely to need during real orchestration:
+`SKILL.md` now acts as the front door and runtime router. Its job is to:
 
-- when planner-first mode is required
-- what the main agent may keep locally
-- what must be delegated
-- how waiting, progress checks, and recovery work
-- how review and closure should happen
+- determine whether the orchestration workflow is even appropriate
+- force an explicit role-identity check before major orchestration actions
+- route the current round into the companion document that governs the next stage
 
-Lower-frequency aids stay out of the main file unless they directly govern runtime behavior.
+This keeps high-frequency runtime attention focused on the current decision instead of mixing planning, dispatch, waiting, and closure into one always-loaded block.
 
-### 2. Separate role baselines from the main contract
+### 2. Role identity is explicit before authority moves
 
-`roles/*.md` are not duplicated into the main skill body. Each role file carries only the stable baseline for that role:
+The orchestration model now distinguishes:
 
-- `planner`: read-only decomposition and risk judgment
-- `worker`: bounded implementation with self-review
-- `reviewer`: independent read-only review
-- `explorer`: bounded evidence gathering
+- `top-level main agent`
+- ordinary delegated children such as `planner`, `worker`, `reviewer`, and `explorer`
+- a bounded `delegate-orchestrator`
 
-This keeps the main contract focused while still giving each sub-agent a role-specific baseline when dispatched.
+That role-identity gate is a hard attention-control point. It is there to prevent accidental authority inheritance and to stop delegated children from behaving like a second top-level orchestrator.
 
-### 3. Make role-doc reading harder to forget
+### 3. Planner-first is a real stage boundary
 
-The skill now treats role-document attachment as part of dispatch correctness:
+When planner-first mode is active, planner owns mainline decomposition judgment. The main agent may still do narrow framing and contradiction checks, but should not silently form a second local implementation plan before planner returns.
 
-- `agents/openai.yaml` tells the lead agent to attach the matching `roles/<role>.md` path before dispatch
-- `SKILL.md` contains a short dispatch gate for role-doc attachment
-- packet references remind the lead agent to require read-before-execution
+This is meant to reduce a common failure mode: the lead agent says “planner-first” but still locally decides packet structure before the planner result arrives.
 
-This is meant to reduce drift caused by long context or hand-written packets.
+### 4. Dispatch correctness is treated as a first-class contract
 
-### 4. Use explicit boundaries to reduce role drift
+`dispatch-and-delegation.md` makes several boundaries explicit:
 
-The orchestration contract makes several boundaries explicit:
+- first-layer packets must be mutually exclusive
+- `fork_context:false` is the default
+- every packet must carry scope, non-goals, ownership, expected deliverable, and escalation path
+- role-document attachment is part of packet completeness
+- sub-delegation must be explicitly authorized
 
-- planner owns mainline decomposition judgment when planner-first mode is active
-- the main agent may do only narrow pre-planner local probing
-- once a writable worker is in flight, the main agent should stay in integration-readiness mode instead of designing the next implementation wave
-- recovery must be evidence-driven rather than time-driven
+The goal is to make packet quality something verifiable, not just something hoped for.
 
-These constraints are designed to reduce the common failure modes where the lead agent re-absorbs planning or implementation work.
+### 5. `delegate-orchestrator` is bounded autonomy, not a second main agent
 
-### 5. Use node triggers as attention-control points
+The skill now supports one explicitly bounded local orchestration lane via `delegate-orchestrator`, but only inside a parent packet boundary granted by the top-level main agent.
 
-Some critical stages include explicit “state what you are doing now” reminders, for example before dispatch or before recovery decisions.
+This gives you a way to hand down a complex internal lane without collapsing the top-level authority model.
 
-The goal is not verbosity. The goal is to help the lead agent re-focus on the correct rule at the stage where drift is most likely.
+### 6. Waiting and recovery are evidence-driven
+
+`waiting-and-recovery.md` is deliberately not timeout-first. Recovery should come from evidence such as:
+
+- explicit blocked status
+- tool or environment failure
+- packet-shape failure
+- repeated low-signal progress loops
+
+This is meant to reduce premature reclaim and the habit of treating long-running work as failed just because it is slow.
+
+### 7. Final review and closure stay separate from worker self-review
+
+Workers must self-review, but worker self-review is not the unified final review. `review-and-closure.md` keeps:
+
+- integration review
+- reviewer-loop sequencing
+- post-review fix adjudication
+- closure readiness
+- final broad quality gates
+
+as separate closure-stage concerns owned by the lead agent.
 
 ## When To Use This Skill
 
-Use it when the user explicitly wants sub-agents, delegation, or parallel agent work, and wants the lead agent to minimize direct implementation.
+Use it when the user explicitly wants sub-agents, delegation, or parallel agent work, and wants the lead agent to minimize direct implementation while retaining top-level closure authority.
 
 It is especially useful when:
 
 - multiple ownership seams exist
-- planning burden is high enough to justify a dedicated planner
+- planning itself is high-context enough to justify a dedicated planner
+- packet boundaries need to stay explicit
 - independent final review matters
-- the lead agent is at risk of absorbing too much context locally
+- the lead agent is at risk of drifting into being the primary implementer
 
-Do not use it for small single-pass tasks or for tightly entangled changes that cannot be split safely.
+Do not use it for small single-pass tasks or tightly entangled work that cannot be partitioned safely.
 
 ## Installation
 
@@ -105,5 +141,6 @@ Copy this repository into your Codex skills directory as:
 ## Notes
 
 - The skill is repository-agnostic.
+- Companion documents are stage-specific governing surfaces, not extra commentary.
 - Role documents complement the task packet; they do not replace it.
 - The reference files are optional drafting aids, not a second source of truth.
